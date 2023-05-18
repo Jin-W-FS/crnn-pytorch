@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.nn import CTCLoss
 
-from dataset import Synth90kDataset, synth90k_collate_fn
+from lpr_dataset import LPRDataset
 from model import CRNN
 from evaluate import evaluate
 from config import train_config as config
@@ -14,7 +14,7 @@ from config import train_config as config
 
 def train_batch(crnn, data, optimizer, criterion, device):
     crnn.train()
-    images, targets, target_lengths = [d.to(device) for d in data]
+    images, targets, target_lengths = [d.to(device) for d in data[:3]]
 
     logits = crnn(images)
     log_probs = torch.nn.functional.log_softmax(logits, dim=2)
@@ -46,31 +46,34 @@ def main():
 
     img_width = config['img_width']
     img_height = config['img_height']
-    data_dir = config['data_dir']
+    img_channel = config['img_channel']
+    img_shape = (img_height, img_width, img_channel)
+    train_data_dir = config['train_data_dir']
+    tests_data_dir = config['tests_data_dir']
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'device: {device}')
 
-    train_dataset = Synth90kDataset(root_dir=data_dir, mode='train',
-                                    img_height=img_height, img_width=img_width)
-    valid_dataset = Synth90kDataset(root_dir=data_dir, mode='dev',
-                                    img_height=img_height, img_width=img_width)
+    train_dataset = LPRDataset(img_dir=train_data_dir, mode='train',
+                               img_shape=img_shape, lpr_max_len=8)
+    valid_dataset = LPRDataset(img_dir=tests_data_dir, mode='valid',
+                               img_shape=img_shape, lpr_max_len=8)
 
     train_loader = DataLoader(
         dataset=train_dataset,
         batch_size=train_batch_size,
         shuffle=True,
         num_workers=cpu_workers,
-        collate_fn=synth90k_collate_fn)
+        collate_fn=train_dataset.collate_fn)
     valid_loader = DataLoader(
         dataset=valid_dataset,
         batch_size=eval_batch_size,
         shuffle=True,
         num_workers=cpu_workers,
-        collate_fn=synth90k_collate_fn)
+        collate_fn=valid_dataset.collate_fn)
 
-    num_class = len(Synth90kDataset.LABEL2CHAR) + 1
-    crnn = CRNN(1, img_height, img_width, num_class,
+    num_class = len(LPRDataset.CHARS)
+    crnn = CRNN(img_channel, img_height, img_width, num_class,
                 map_to_seq_hidden=config['map_to_seq_hidden'],
                 rnn_hidden=config['rnn_hidden'],
                 leaky_relu=config['leaky_relu'])
@@ -79,7 +82,7 @@ def main():
     crnn.to(device)
 
     optimizer = optim.RMSprop(crnn.parameters(), lr=lr)
-    criterion = CTCLoss(reduction='sum', zero_infinity=True)
+    criterion = CTCLoss(blank=0, reduction='sum', zero_infinity=True)
     criterion.to(device)
 
     assert save_interval % valid_interval == 0

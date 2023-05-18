@@ -2,6 +2,11 @@
 .vscode
 .DS_Store
 Pipfile*
+*~
+
+# weights
+weights/
+checkpoints/
 
 # proto related files
 *_pb2.py
@@ -10,6 +15,9 @@ Pipfile*
 __pycache__/
 *.py[cod]
 *$py.class
+
+# ipython notebooks
+*ipynb
 
 # C extensions
 *.so
