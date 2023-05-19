@@ -52,9 +52,9 @@ class LPRDataset(Dataset):
         pbar = tqdm(total=len(img_paths), desc=f'load {self.mode} set')
         for i, fname in enumerate(img_paths):
             try:
-                data = self.loadImage(fname)
+                data = self.load(fname)
             except Exception as ex:
-                print("Error loading", fname)
+                print("Error loading", fname, ex)
                 continue
             self.images.append(data)
             pbar.update(1)
@@ -66,18 +66,8 @@ class LPRDataset(Dataset):
     def __getitem__(self, index):
         return self.images[index]
 
-    def loadImage(self, filename):
-        if self.img_shape[-1] == 1:
-            img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
-        else:
-            img = cv2.imread(filename)
-        if img.shape != self.img_shape:
-            h, w, c = self.img_shape
-            if img.shape[0] != h or img.shape[1] != w:
-                img = cv2.resize(img, (w, h))
-            if img.shape[-1] != c:
-                img = img.reshape(self.img_shape)
-        img = self.PreprocFun(img)
+    def load(self, filename):
+        img = self.loadImage(filename, self.img_shape, self.PreprocFun)
         if self.mode == 'predict': return img
 
         basename = os.path.basename(filename)
@@ -86,6 +76,26 @@ class LPRDataset(Dataset):
         label = self.encode(imgname)
 
         return img, label, len(label), filename
+
+    @staticmethod
+    def loadImage(img, shape, preproc=None):
+        if isinstance(img, str):
+            img = cv2.imread(img)
+        if img.shape != shape:
+            h, w, c = shape
+            trc = (img.shape[-1], c)
+            if trc == (3, 1):
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            elif trc == (1, 3):
+                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+            else:
+                trc = None
+            if img.shape[0] != h or img.shape[1] != w:
+                img = cv2.resize(img, (w, h))
+            if trc is not None:
+                img = img.reshape(shape)
+        if preproc: img = preproc(img)
+        return img
 
     @staticmethod
     def transform(img):

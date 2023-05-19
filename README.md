@@ -6,13 +6,13 @@
 
 ```command
 $ pip install -r requirements.txt
-$ python src/predict.py -h
+$ python predict.py -h
 ```
 
 Everything is okay. Let's predict the demo images.
 
 ```command
-$ python src/predict.py demo/*.jpg
+$ python predict.py demo/*.jpg
 device: cpu
 Predict: 100% [00:00<00:00,  4.89it/s]
 
@@ -69,7 +69,7 @@ We pretrained the RCNN model on [Synth90k](http://www.robots.ox.ac.uk/~vgg/data/
 ### Evaluate the model on the Synth90k dataset
 
 ```command
-$ python src/evaluate.py
+$ python evaluate.py
 ```
 
 Evaluate on 891927 Synth90k test images:
@@ -85,12 +85,12 @@ Evaluate on 891927 Synth90k test images:
 
 ## Train your model
 
-You could adjust hyper-parameters in `./src/config.py`.
+You could adjust hyper-parameters in `./config.py`.
 
 And train crnn models,
 
 ```command
-$ python src/train.py
+$ python train.py
 ```
 
 ## Acknowledgement
